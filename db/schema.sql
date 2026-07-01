@@ -106,12 +106,14 @@ DECLARE
     cutoff_raw    date := current_date - raw_days;
     cutoff_hourly date := date_trunc('month', current_date - hourly_days)::date;
 BEGIN
-    FOR r IN SELECT relname FROM pg_class WHERE relname LIKE 'flows_raw_2%' LOOP
+    FOR r IN SELECT relname FROM pg_class
+             WHERE relkind = 'r' AND relname ~ '^flows_raw_[0-9]{8}$' LOOP
         IF to_date(right(r.relname, 8), 'YYYYMMDD') < cutoff_raw THEN
             EXECUTE format('DROP TABLE IF EXISTS %I', r.relname);
         END IF;
     END LOOP;
-    FOR r IN SELECT relname FROM pg_class WHERE relname LIKE 'flows_hourly_2%' LOOP
+    FOR r IN SELECT relname FROM pg_class
+             WHERE relkind = 'r' AND relname ~ '^flows_hourly_[0-9]{6}$' LOOP
         IF to_date(right(r.relname, 6) || '01', 'YYYYMMDD') < cutoff_hourly THEN
             EXECUTE format('DROP TABLE IF EXISTS %I', r.relname);
         END IF;
