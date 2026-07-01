@@ -802,12 +802,12 @@ class BatchWriter(threading.Thread):
         self._sink = sink
         self._batch_size = batch_size
         self._flush_seconds = flush_seconds
-        self._stop = threading.Event()
+        self._stop_event = threading.Event()
 
     def run(self) -> None:
         buf = []
         last = time.monotonic()
-        while not self._stop.is_set() or not self._queue.empty():
+        while not self._stop_event.is_set() or not self._queue.empty():
             timeout = max(0.0, self._flush_seconds - (time.monotonic() - last))
             try:
                 buf.append(self._queue.get(timeout=timeout))
@@ -822,7 +822,7 @@ class BatchWriter(threading.Thread):
             self._sink.write_batch(buf)
 
     def stop(self) -> None:
-        self._stop.set()
+        self._stop_event.set()
 ```
 
 - [ ] **Step 4: Run unit test to verify it passes**
@@ -848,7 +848,7 @@ class UdpReceiver(threading.Thread):
         self._recv_buffer_bytes = recv_buffer_bytes
         self._queue = out_queue
         self._store = store or TemplateStore()
-        self._stop = threading.Event()
+        self._stop_event = threading.Event()
 
     def _make_socket(self):
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -863,7 +863,7 @@ class UdpReceiver(threading.Thread):
     def run(self) -> None:
         sock = self._make_socket()
         try:
-            while not self._stop.is_set():
+            while not self._stop_event.is_set():
                 try:
                     data, addr = sock.recvfrom(65535)
                 except socket.timeout:
@@ -877,7 +877,7 @@ class UdpReceiver(threading.Thread):
             sock.close()
 
     def stop(self) -> None:
-        self._stop.set()
+        self._stop_event.set()
 ```
 
 - [ ] **Step 6: Create `src/mikroflow/collector/main.py`**
