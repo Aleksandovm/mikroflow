@@ -5,6 +5,10 @@ services:
       POSTGRES_USER: mikroflow
       POSTGRES_PASSWORD: mikroflow
       POSTGRES_DB: mikroflow
+    # Published only on the server's loopback — reach it from your laptop via an
+    # SSH tunnel, never expose 5432 to the network directly.
+    ports:
+      - "127.0.0.1:5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
