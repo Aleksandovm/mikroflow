@@ -3,6 +3,7 @@ from apscheduler.schedulers.blocking import BlockingScheduler
 from mikroflow.config import get_settings
 from mikroflow.db import apply_schema, make_pool
 from mikroflow.worker.aggregator import aggregate
+from mikroflow.worker.arp import fetch_arp, normalize_arp, sync_arp
 from mikroflow.worker.lease_sync import fetch_leases, normalize_leases, sync_leases
 from mikroflow.worker.rdns import resolve_pending
 from mikroflow.worker.retention import run_maintenance
@@ -13,10 +14,17 @@ def _do_lease_sync(pool, s):
     sync_leases(pool, normalize_leases(rows))
 
 
+def _do_arp_sync(pool, s):
+    rows = fetch_arp(s.router_host, s.router_user, s.router_password, s.router_port)
+    sync_arp(pool, normalize_arp(rows))
+
+
 def build_scheduler(pool, s):
     sched = BlockingScheduler(timezone="UTC")
     sched.add_job(lambda: _do_lease_sync(pool, s), "interval",
                   seconds=s.lease_sync_seconds, id="lease_sync", name="lease_sync")
+    sched.add_job(lambda: _do_arp_sync(pool, s), "interval",
+                  seconds=s.arp_sync_seconds, id="arp_sync", name="arp_sync")
     sched.add_job(lambda: resolve_pending(pool, s), "interval",
                   seconds=s.rdns_poll_seconds, id="rdns", name="rdns")
     sched.add_job(lambda: aggregate(pool), "interval",

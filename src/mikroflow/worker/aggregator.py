@@ -8,7 +8,7 @@ SELECT
     date_trunc('hour', o.ts) AS hour,
     o.device_ip,
     l.hostname,
-    l.mac,
+    coalesce(l.mac, a.mac) AS mac,
     o.remote_ip,
     d.domain,
     o.remote_port,
@@ -47,8 +47,9 @@ LEFT JOIN LATERAL (
         abs(extract(epoch FROM (l.valid_from - %(hour)s)))
     LIMIT 1
 ) l ON true
+LEFT JOIN arp a ON a.ip = o.device_ip
 LEFT JOIN ip_domain d ON d.ip = o.remote_ip
-GROUP BY 1, o.device_ip, l.hostname, l.mac, o.remote_ip, d.domain,
+GROUP BY 1, o.device_ip, l.hostname, l.mac, a.mac, o.remote_ip, d.domain,
          o.remote_port, o.protocol
 ON CONFLICT (hour, device_ip, remote_ip, remote_port, protocol) DO UPDATE
 SET device_name   = EXCLUDED.device_name,

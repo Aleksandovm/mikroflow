@@ -23,6 +23,7 @@ class Settings(BaseSettings):
     router_password: str = ""
     router_port: int = 8728
     lease_sync_seconds: int = 300
+    arp_sync_seconds: int = 300
 
     # reverse-DNS
     rdns_batch_size: int = 200

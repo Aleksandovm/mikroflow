@@ -26,6 +26,13 @@ CREATE INDEX IF NOT EXISTS dhcp_leases_ip_idx ON dhcp_leases (ip, valid_from);
 CREATE UNIQUE INDEX IF NOT EXISTS dhcp_leases_open_uidx
     ON dhcp_leases (ip) WHERE valid_to IS NULL;
 
+-- ARP snapshot: broad IP -> MAC map covering static hosts, not just DHCP.
+CREATE TABLE IF NOT EXISTS arp (
+    ip         inet PRIMARY KEY,
+    mac        text,
+    updated_at timestamptz NOT NULL
+);
+
 -- Reverse-DNS cache.
 CREATE TABLE IF NOT EXISTS ip_domain (
     ip          inet PRIMARY KEY,

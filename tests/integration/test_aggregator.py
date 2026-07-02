@@ -60,6 +60,22 @@ def test_mac_used_when_hostname_missing(pool):
     assert row == (None, "0E:3E:8C:C8:B7:5A")
 
 
+def test_mac_from_arp_when_no_dhcp_lease(pool):
+    # static host: no DHCP lease, but present in the ARP snapshot
+    with pool.connection() as conn:
+        conn.execute(
+            "INSERT INTO arp (ip, mac, updated_at) VALUES (%s,%s, now())",
+            ("10.59.0.99", "BC:24:11:DB:51:16"),
+        )
+        _flow(conn, "10.59.0.99", "8.8.8.8", 40000, 443, 100)
+    aggregate(pool, now=HOUR + timedelta(hours=2))
+    with pool.connection() as conn:
+        row = conn.execute(
+            "SELECT device_name, mac FROM flows_hourly WHERE hour = %s", (HOUR,)
+        ).fetchone()
+    assert row == (None, "BC:24:11:DB:51:16")
+
+
 def test_nearest_lease_used_when_none_covers_hour(pool):
     with pool.connection() as conn:
         # lease first seen after the flow hour (bootstrap window)
