@@ -32,16 +32,29 @@ docker compose version           # проверка
 
 # 2. Доставить код на сервер
 
-```bash
-# Вариант А — через git remote (если заведёшь GitHub/GitLab)
-git remote add origin <url>
-git push -u origin feat/netflow-collector
+Код лежит в приватном репозитории **github.com/Aleksandovm/mikroflow**.
+Сначала слей PR в ветку `master`, затем клонируй её на сервер.
 
-# Вариант Б — просто скопировать папку на сервер
-rsync -av --exclude .venv --exclude .git ./ user@server:/opt/mikroflow/
+Репозиторий приватный, поэтому серверу нужен доступ к GitHub. Самый простой
+способ — Personal Access Token (scope `repo`) в URL клонирования:
+
+```bash
+sudo mkdir -p /opt && cd /opt
+git clone https://<TOKEN>@github.com/Aleksandovm/mikroflow.git
+cd mikroflow
 ```
 
-Код должен лежать, например, в `/opt/mikroflow`.
+Альтернатива — deploy key (SSH): добавь публичный ключ сервера в
+Settings → Deploy keys репозитория, затем:
+
+```bash
+git clone git@github.com:Aleksandovm/mikroflow.git /opt/mikroflow
+```
+
+Обновление кода в будущем — просто `git pull` в `/opt/mikroflow`.
+
+> Если PR ещё не слит, можно клонировать рабочую ветку напрямую:
+> `git clone -b feat/netflow-collector https://<TOKEN>@github.com/Aleksandovm/mikroflow.git`
 
 # 3. Настроить `.env` (ОБЯЗАТЕЛЬНО смени пароли)
 
