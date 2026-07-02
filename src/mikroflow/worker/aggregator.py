@@ -19,9 +19,13 @@ FROM flows_raw f
 LEFT JOIN LATERAL (
     SELECT hostname FROM dhcp_leases l
     WHERE l.ip = f.src_ip
-      AND l.valid_from <= %(hour)s
-      AND (l.valid_to IS NULL OR l.valid_to > %(hour)s)
-    ORDER BY l.valid_from DESC
+    ORDER BY
+        -- prefer the lease that actually covered this hour...
+        (l.valid_from <= %(hour)s
+         AND (l.valid_to IS NULL OR l.valid_to > %(hour)s)) DESC,
+        -- ...otherwise fall back to the lease nearest in time (handles the
+        -- bootstrap window where lease history starts after the flow hour)
+        abs(extract(epoch FROM (l.valid_from - %(hour)s)))
     LIMIT 1
 ) l ON true
 LEFT JOIN ip_domain d ON d.ip = f.dst_ip
