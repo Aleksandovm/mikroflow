@@ -40,6 +40,7 @@ CREATE TABLE IF NOT EXISTS flows_hourly (
     hour        timestamptz NOT NULL,
     src_ip      inet        NOT NULL,
     device_name text,
+    mac         text,
     dst_ip      inet        NOT NULL,
     dst_domain  text,
     dst_port    integer     NOT NULL,
@@ -50,14 +51,20 @@ CREATE TABLE IF NOT EXISTS flows_hourly (
     PRIMARY KEY (hour, src_ip, dst_ip, dst_port, protocol)
 ) PARTITION BY RANGE (hour);
 
+-- Migration for deployments created before the mac column existed.
+ALTER TABLE flows_hourly ADD COLUMN IF NOT EXISTS mac text;
+
 -- Aggregation watermark.
 CREATE TABLE IF NOT EXISTS agg_state (
     name      text PRIMARY KEY,
     last_hour timestamptz
 );
 
-CREATE OR REPLACE VIEW v_connections AS
-SELECT hour, src_ip, device_name, dst_ip, dst_domain, dst_port, protocol,
+-- Dropped and recreated (rather than CREATE OR REPLACE) so the mac column can
+-- sit next to device_name instead of only at the end.
+DROP VIEW IF EXISTS v_connections;
+CREATE VIEW v_connections AS
+SELECT hour, src_ip, device_name, mac, dst_ip, dst_domain, dst_port, protocol,
        bytes, packets, flow_count
 FROM flows_hourly;
 

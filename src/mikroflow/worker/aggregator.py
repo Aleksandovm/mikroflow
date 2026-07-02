@@ -2,12 +2,13 @@ from datetime import datetime, timedelta, timezone
 
 _AGG_SQL = """
 INSERT INTO flows_hourly
-    (hour, src_ip, device_name, dst_ip, dst_domain, dst_port, protocol,
+    (hour, src_ip, device_name, mac, dst_ip, dst_domain, dst_port, protocol,
      bytes, packets, flow_count)
 SELECT
     date_trunc('hour', f.ts) AS hour,
     f.src_ip,
     l.hostname,
+    l.mac,
     f.dst_ip,
     d.domain,
     f.dst_port,
@@ -17,7 +18,9 @@ SELECT
     count(*)
 FROM flows_raw f
 LEFT JOIN LATERAL (
-    SELECT hostname FROM dhcp_leases l
+    -- keep hostname and MAC separately; empty hostname becomes NULL
+    SELECT nullif(l.hostname, '') AS hostname, l.mac AS mac
+    FROM dhcp_leases l
     WHERE l.ip = f.src_ip
     ORDER BY
         -- prefer the lease that actually covered this hour...
@@ -30,9 +33,10 @@ LEFT JOIN LATERAL (
 ) l ON true
 LEFT JOIN ip_domain d ON d.ip = f.dst_ip
 WHERE f.ts >= %(hour)s AND f.ts < %(hour)s + interval '1 hour'
-GROUP BY 1, f.src_ip, l.hostname, f.dst_ip, d.domain, f.dst_port, f.protocol
+GROUP BY 1, f.src_ip, l.hostname, l.mac, f.dst_ip, d.domain, f.dst_port, f.protocol
 ON CONFLICT (hour, src_ip, dst_ip, dst_port, protocol) DO UPDATE
 SET device_name = EXCLUDED.device_name,
+    mac         = EXCLUDED.mac,
     dst_domain  = EXCLUDED.dst_domain,
     bytes       = EXCLUDED.bytes,
     packets     = EXCLUDED.packets,
